@@ -12,10 +12,13 @@ public class SwingMusicPlayer extends JFrame {
     private JButton playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton;
     private JLabel currentSongLabel;
     private JSlider volumeSlider;
+    private JSlider progressSlider; // Interactive progress slider
     private MusicPlayer musicPlayer;
     private boolean isShuffle = false; // Track shuffle mode
     private Random random = new Random();
     private DefaultListModel<String> listModel; // For dynamically updating the song list
+    private Timer progressTimer; // Timer for progress updates
+    private boolean isAdjustingProgress = false; // Track user interaction with slider
 
     public SwingMusicPlayer(List<File> songs) {
         setTitle("Modern Music Player");
@@ -59,7 +62,7 @@ public class SwingMusicPlayer extends JFrame {
 
         // Bottom panel for controls
         JPanel controlPanel = new JPanel();
-        controlPanel.setLayout(new GridLayout(2, 1, 10, 10));
+        controlPanel.setLayout(new GridLayout(3, 1, 10, 10));
         controlPanel.setBackground(backgroundColor);
 
         // Buttons panel
@@ -67,25 +70,35 @@ public class SwingMusicPlayer extends JFrame {
         buttonPanel.setLayout(new GridLayout(1, 6, 10, 10));
         buttonPanel.setBackground(backgroundColor);
 
-        previousButton = new JButton("Previous");
-        playButton = new JButton("Play");
-        pauseButton = new JButton("Pause");
-        nextButton = new JButton("Next");
-        shuffleButton = new JButton("Shuffle");
-        loadFolderButton = new JButton("Load Folder");
+        // Initialize buttons with PNG images
+        playButton = new JButton(loadImageIcon("pb.png"));
+        pauseButton = new JButton(loadImageIcon("pausebutton.png"));
+        nextButton = new JButton(loadImageIcon("nb.png"));
+        previousButton = new JButton(loadImageIcon("pp.png"));
+        shuffleButton = new JButton(loadImageIcon("shuffle.png"));
+        loadFolderButton = new JButton(loadImageIcon("music-file.png"));
+
+        // Set tooltips for better user experience
+        playButton.setToolTipText("Play");
+        pauseButton.setToolTipText("Pause");
+        nextButton.setToolTipText("Next");
+        previousButton.setToolTipText("Previous");
+        shuffleButton.setToolTipText("Shuffle");
+        loadFolderButton.setToolTipText("Load Folder");
 
         // Set button colors
-        previousButton.setBackground(buttonColor);
         playButton.setBackground(buttonColor);
         pauseButton.setBackground(buttonColor);
         nextButton.setBackground(buttonColor);
+        previousButton.setBackground(buttonColor);
         shuffleButton.setBackground(buttonColor);
         loadFolderButton.setBackground(buttonColor);
 
-        previousButton.setForeground(buttonTextColor);
+        // Set button text colors
         playButton.setForeground(buttonTextColor);
         pauseButton.setForeground(buttonTextColor);
         nextButton.setForeground(buttonTextColor);
+        previousButton.setForeground(buttonTextColor);
         shuffleButton.setForeground(buttonTextColor);
         loadFolderButton.setForeground(buttonTextColor);
 
@@ -105,20 +118,31 @@ public class SwingMusicPlayer extends JFrame {
         JLabel volumeLabel = new JLabel("Volume:");
         volumeLabel.setForeground(labelColor);
         volumeSlider = new JSlider(0, 100, 50);
-        volumeSlider.setMajorTickSpacing(25);
-        volumeSlider.setPaintTicks(true);
-        volumeSlider.setPaintLabels(true);
         volumeSlider.setBackground(backgroundColor);
-        volumeSlider.setForeground(labelColor);
-
         volumePanel.add(volumeLabel);
         volumePanel.add(volumeSlider);
 
+        // Progress slider
+        progressSlider = new JSlider(0, 100, 0);
+        progressSlider.setBackground(backgroundColor);
+        progressSlider.setEnabled(false);
+        progressSlider.addChangeListener(e -> {
+            if (progressSlider.getValueIsAdjusting()) {
+                isAdjustingProgress = true;
+            } else {
+                if (isAdjustingProgress) {
+                    int progress = progressSlider.getValue();
+                    musicPlayer.seekTo(progress); // Seek to new position
+                    isAdjustingProgress = false;
+                }
+            }
+        });
+
         controlPanel.add(buttonPanel);
         controlPanel.add(volumePanel);
+        controlPanel.add(progressSlider);
 
         rightPanel.add(controlPanel, BorderLayout.SOUTH);
-
         add(rightPanel, BorderLayout.EAST);
 
         // Initialize MusicPlayer
@@ -135,15 +159,35 @@ public class SwingMusicPlayer extends JFrame {
         // Add ListSelectionListener to the song list
         songList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                // Enable the Play button and reset Pause button when a new song is selected
                 playButton.setEnabled(true);
                 pauseButton.setEnabled(false);
                 currentSongLabel.setText("No song selected");
             }
         });
 
+        // Volume slider listener
+        volumeSlider.addChangeListener(e -> {
+            int volume = volumeSlider.getValue();
+            musicPlayer.setVolume(volume);
+        });
+
         // Set the main window background color
         getContentPane().setBackground(backgroundColor);
+    }
+
+    // Method to load PNG images for buttons
+    private ImageIcon loadImageIcon(String fileName) {
+        try {
+            java.net.URL resource = getClass().getClassLoader().getResource("assets/" + fileName);
+            if (resource == null) {
+                System.err.println("Error: Icon not found: " + fileName);
+                return new ImageIcon(); // Return an empty icon to prevent layout issues
+            }
+            return new ImageIcon(resource);
+        } catch (Exception e) {
+            System.err.println("Error loading icon: " + fileName + " - " + e.getMessage());
+            return new ImageIcon(); // Return an empty icon to prevent layout issues
+        }
     }
 
     private void playSong() {
@@ -157,28 +201,35 @@ public class SwingMusicPlayer extends JFrame {
         currentSongLabel.setText("Playing: " + selectedSong);
         musicPlayer.play(selectedIndex);
 
-        playButton.setEnabled(false); // Disable Play when playing
-        pauseButton.setEnabled(true); // Enable Pause when playing
+        progressSlider.setEnabled(true); // Enable progress slider
+        progressTimer = new Timer(200, e -> {
+            if (!isAdjustingProgress) {
+                int progress = musicPlayer.getProgress();
+                progressSlider.setValue(progress);
+            }
+        });
+        progressTimer.start();
+
+        playButton.setEnabled(false);
+        pauseButton.setEnabled(true);
     }
 
     private void pauseSong() {
         musicPlayer.pause();
         currentSongLabel.setText("Paused");
-        playButton.setEnabled(true); // Enable Play after pausing
-        pauseButton.setEnabled(false); // Disable Pause after pausing
+        playButton.setEnabled(true);
+        pauseButton.setEnabled(false);
+        if (progressTimer != null) progressTimer.stop(); // Stop updating progress
     }
 
     private void playNext() {
-        int nextIndex;
+        // Clear the last paused position to ensure the next song starts from the beginning
+        musicPlayer.lastPausedPosition = 0;
 
-        if (isShuffle) {
-            // Pick a random index
-            nextIndex = random.nextInt(songList.getModel().getSize());
-        } else {
-            // Play the next song in sequence
-            int currentIndex = songList.getSelectedIndex();
-            nextIndex = (currentIndex + 1) % songList.getModel().getSize();
-        }
+        // If shuffle is enabled, pick a random song; otherwise, go to the next one sequentially
+        int nextIndex = isShuffle
+                ? random.nextInt(songList.getModel().getSize())
+                : (songList.getSelectedIndex() + 1) % songList.getModel().getSize();
 
         songList.setSelectedIndex(nextIndex);
         playSong();
@@ -193,8 +244,7 @@ public class SwingMusicPlayer extends JFrame {
 
     private void toggleShuffle() {
         isShuffle = !isShuffle;
-        String status = isShuffle ? "Shuffle ON" : "Shuffle OFF";
-        JOptionPane.showMessageDialog(this, status, "Shuffle", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, isShuffle ? "Shuffle ON" : "Shuffle OFF", "Shuffle", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void loadFolder() {
@@ -205,8 +255,6 @@ public class SwingMusicPlayer extends JFrame {
         int result = folderChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFolder = folderChooser.getSelectedFile();
-
-            // Get all valid .wav files in the folder
             File[] files = selectedFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".wav"));
 
             if (files == null || files.length == 0) {
@@ -215,13 +263,12 @@ public class SwingMusicPlayer extends JFrame {
                 return;
             }
 
-            // Clear the current list and reload
-            listModel.clear(); // Clear the JList
-            musicPlayer.clearSongs(); // Clear the MusicPlayer song list
+            listModel.clear();
+            musicPlayer.clearSongs();
 
             for (File file : files) {
-                listModel.addElement(file.getName()); // Update JList
-                musicPlayer.addSong(file); // Update MusicPlayer
+                listModel.addElement(file.getName());
+                musicPlayer.addSong(file);
             }
 
             JOptionPane.showMessageDialog(this, "Folder loaded successfully with " + files.length + " WAV file(s).", 

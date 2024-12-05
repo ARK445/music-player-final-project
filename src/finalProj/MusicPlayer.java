@@ -1,93 +1,118 @@
 package finalProj;
 
 import javax.sound.sampled.*;
-import javax.swing.JOptionPane;
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MusicPlayer {
-
-    private final List<File> songs;
-    private Clip audioClip;
-    private int currentFrame = 0;
-    private boolean isPaused = false;
-    private int currentIndex = -1;
+    private Clip clip;
+    private List<File> songs;
+    private int currentSongIndex = -1;
+    public long lastPausedPosition = 0; // Store the position where the music was paused
 
     public MusicPlayer(List<File> songs) {
-        this.songs = songs;
+        this.songs = new ArrayList<>(songs);
     }
 
     public void play(int index) {
-        try {
-            if (isPaused && index == currentIndex) {
-                audioClip.setFramePosition(currentFrame);
-                audioClip.start();
-                isPaused = false;
-                return;
-            }
+        if (index < 0 || index >= songs.size()) {
+            return;
+        }
+        stop();
+        currentSongIndex = index;
 
-            stop();
-            currentIndex = index;
+        try {
             File song = songs.get(index);
             AudioInputStream audioStream = AudioSystem.getAudioInputStream(song);
-            audioClip = AudioSystem.getClip();
-            audioClip.open(audioStream);
+            clip = AudioSystem.getClip();
+            clip.open(audioStream);
 
-            currentFrame = 0;
-            isPaused = false;
+            // Seek to the last paused position if it's available
+            if (lastPausedPosition > 0) {
+                clip.setFramePosition((int) lastPausedPosition);
+            }
 
-            audioClip.start();
-        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            // Register a LineListener to handle the song ending
+            clip.addLineListener(new LineListener() {
+                @Override
+                public void update(LineEvent event) {
+                    if (event.getType() == LineEvent.Type.STOP) {
+                        // When the song finishes, automatically play the next song
+                        if (clip.getFramePosition() == clip.getFrameLength()) {
+                            // Skip to next song
+                        }
+                    }
+                }
+            });
+
+            clip.start();
+        } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error playing file: " + e.getMessage(), "Playback Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     public void pause() {
-        if (audioClip != null && audioClip.isRunning()) {
-            currentFrame = audioClip.getFramePosition();
-            audioClip.stop();
-            isPaused = true;
+        if (clip != null && clip.isRunning()) {
+            lastPausedPosition = clip.getFramePosition(); // Store the position where it was paused
+            clip.stop();
         }
     }
 
     public void stop() {
-        if (audioClip != null) {
-            audioClip.stop();
-            audioClip.close();
+        if (clip != null) {
+            clip.stop();
+            clip.close();
         }
-        currentFrame = 0;
-        isPaused = false;
-        currentIndex = -1;
     }
 
-    public void setVolume(int volume) {
-        if (audioClip != null) {
-            try {
-                FloatControl gainControl = (FloatControl) audioClip.getControl(FloatControl.Type.MASTER_GAIN);
-                float min = gainControl.getMinimum();
-                float max = gainControl.getMaximum();
-                float newVolume = min + (max - min) * (volume / 100.0f);
-                gainControl.setValue(newVolume);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Volume control is not supported for this audio clip.");
+    public void seekTo(int progress) {
+        if (clip != null && clip.isOpen()) {
+            long totalFrames = clip.getFrameLength();
+            int framePosition = (int) ((progress / 100.0) * totalFrames);
+            clip.setFramePosition(framePosition);
+            if (!clip.isRunning()) {
+                clip.start();
             }
         }
     }
 
-    public void addSong(File song) {
-        if (song != null && song.exists() && song.getName().toLowerCase().endsWith(".wav")) {
-            songs.add(song);
-        } else {
-            System.out.println("Invalid or non-existent file: " + song);
+    public int getProgress() {
+        if (clip != null && clip.isOpen()) {
+            long currentFrame = clip.getFramePosition();
+            long totalFrames = clip.getFrameLength();
+            if (totalFrames > 0) {
+                return (int) ((currentFrame * 100) / totalFrames);
+            }
+        }
+        return 0; // Default to 0 if no clip is loaded
+    }
+
+    public void setVolume(int volume) {
+        if (clip != null) {
+            FloatControl volumeControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+            float range = volumeControl.getMaximum() - volumeControl.getMinimum();
+            float gain = (range * volume / 100) + volumeControl.getMinimum();
+            volumeControl.setValue(gain);
         }
     }
 
+    public void addSong(File song) {
+        songs.add(song);
+    }
+
     public void clearSongs() {
+        stop();
         songs.clear();
-        currentFrame = 0;
-        isPaused = false;
-        currentIndex = -1;
+    }
+
+    public boolean isPlaying() {
+        return clip != null && clip.isRunning();
+    }
+
+    public void setLineListener(LineListener listener) {
+        if (clip != null) {
+            clip.addLineListener(listener);
+        }
     }
 }
