@@ -10,7 +10,7 @@ public class SwingMusicPlayer extends JFrame {
 
     private JList<String> songList;
     private JButton playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton;
-    private JLabel currentSongLabel;
+    private JLabel currentSongLabel, currentTimeLabel, totalTimeLabel;
     private JSlider volumeSlider;
     private JSlider progressSlider; // Interactive progress slider
     private MusicPlayer musicPlayer;
@@ -24,13 +24,16 @@ public class SwingMusicPlayer extends JFrame {
         setTitle("Modern Music Player");
         setSize(1100, 700);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+        setLayout(null);  // Set layout to null for manual positioning of components
+
+        // Disable resizing of the JFrame
+        setResizable(false);
 
         // Set dark theme colors
-        Color backgroundColor = new Color(40, 40, 40);
-        Color buttonColor = new Color(60, 60, 60);
-        Color buttonTextColor = Color.WHITE;
-        Color labelColor = Color.WHITE;
+        Color backgroundColor = new Color(40, 40, 40); // Dark background color
+        Color buttonColor = new Color(60, 60, 60); // Dark button background
+        Color buttonTextColor = Color.WHITE; // White text for buttons
+        Color labelColor = Color.WHITE; // White text for labels
 
         // Top panel for current song display
         JPanel topPanel = new JPanel();
@@ -39,13 +42,9 @@ public class SwingMusicPlayer extends JFrame {
         currentSongLabel.setFont(new Font("Arial", Font.BOLD, 18));
         currentSongLabel.setForeground(labelColor);
         topPanel.setBackground(backgroundColor);
+        topPanel.setBounds(10, 10, 1080, 40); // Adjust the position of the top panel
         topPanel.add(currentSongLabel);
-        add(topPanel, BorderLayout.NORTH);
-
-        // Right panel for song list and controls
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BorderLayout());
-        rightPanel.setBackground(backgroundColor);
+        add(topPanel);
 
         // Song List Panel
         listModel = new DefaultListModel<>();
@@ -54,21 +53,19 @@ public class SwingMusicPlayer extends JFrame {
         }
         songList = new JList<>(listModel);
         songList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        songList.setBackground(new Color(60, 60, 60));
-        songList.setForeground(Color.WHITE);
-        songList.setSelectionBackground(new Color(80, 80, 80));
+        songList.setBackground(new Color(60, 60, 60)); // Dark background for song list
+        songList.setForeground(Color.WHITE); // White text for song list
+        songList.setSelectionBackground(new Color(80, 80, 80)); // Dark selection background
         JScrollPane scrollPane = new JScrollPane(songList);
-        rightPanel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBounds(10, 60, 200, 500);  // Adjust the position and size of the song list
+        scrollPane.getVerticalScrollBar().setBackground(backgroundColor); // Set dark background for the scroll bar
+        add(scrollPane);
 
-        // Bottom panel for controls
+        // Control panel for buttons and sliders
         JPanel controlPanel = new JPanel();
-        controlPanel.setLayout(new GridLayout(3, 1, 10, 10));
-        controlPanel.setBackground(backgroundColor);
-
-        // Buttons panel
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(1, 6, 10, 10));
-        buttonPanel.setBackground(backgroundColor);
+        controlPanel.setLayout(null);  // Use null layout for control panel to manually position components
+        controlPanel.setBounds(250, 60, 960, 800);  // Adjust control panel bounds to fit the bottom of the frame
+        controlPanel.setBackground(backgroundColor); // Set background color of control panel
 
         // Initialize buttons with PNG images
         playButton = new JButton(loadImageIcon("pb.png"));
@@ -102,16 +99,25 @@ public class SwingMusicPlayer extends JFrame {
         shuffleButton.setForeground(buttonTextColor);
         loadFolderButton.setForeground(buttonTextColor);
 
-        pauseButton.setEnabled(false); // Pause button starts as disabled
+        pauseButton.setEnabled(true); // Pause button starts as disabled
 
-        buttonPanel.add(previousButton);
-        buttonPanel.add(playButton);
-        buttonPanel.add(pauseButton);
-        buttonPanel.add(nextButton);
-        buttonPanel.add(shuffleButton);
-        buttonPanel.add(loadFolderButton);
+        // Manually set bounds for each button to adjust layout
+        playButton.setBounds(230, 550, 45, 45);
+        pauseButton.setBounds(130, 550, 45, 45);
+        nextButton.setBounds(310, 550, 45, 45);
+        previousButton.setBounds(40, 550, 45, 45);
+        shuffleButton.setBounds(410, 550, 45, 45);
+        loadFolderButton.setBounds(500, 550, 45, 45);
 
-        // Volume panel
+        // Add buttons to the control panel
+        controlPanel.add(playButton);
+        controlPanel.add(pauseButton);
+        controlPanel.add(nextButton);
+        controlPanel.add(previousButton);
+        controlPanel.add(shuffleButton);
+        controlPanel.add(loadFolderButton);
+
+        // Volume Panel
         JPanel volumePanel = new JPanel();
         volumePanel.setLayout(new FlowLayout());
         volumePanel.setBackground(backgroundColor);
@@ -121,55 +127,51 @@ public class SwingMusicPlayer extends JFrame {
         volumeSlider.setBackground(backgroundColor);
         volumePanel.add(volumeLabel);
         volumePanel.add(volumeSlider);
+        volumePanel.setBounds(500, 550, 400, 50);  // Position of volume panel in control panel
+        controlPanel.add(volumePanel);
 
         // Progress slider
         progressSlider = new JSlider(0, 100, 0);
         progressSlider.setBackground(backgroundColor);
         progressSlider.setEnabled(false);
+        progressSlider.setBounds(125, 500, 400, 30);  // Position of progress slider in control panel
         progressSlider.addChangeListener(e -> {
             if (progressSlider.getValueIsAdjusting()) {
                 isAdjustingProgress = true;
             } else {
-                if (isAdjustingProgress) {
+                if (isAdjustingProgress) {    
                     int progress = progressSlider.getValue();
                     musicPlayer.seekTo(progress); // Seek to new position
                     isAdjustingProgress = false;
                 }
             }
         });
-
-        controlPanel.add(buttonPanel);
-        controlPanel.add(volumePanel);
         controlPanel.add(progressSlider);
 
-        rightPanel.add(controlPanel, BorderLayout.SOUTH);
-        add(rightPanel, BorderLayout.EAST);
+        // Time labels for progress slider
+        currentTimeLabel = new JLabel("0:00");
+        currentTimeLabel.setForeground(labelColor);
+        currentTimeLabel.setBounds(75, 500, 50, 30); // Position of current time label
+        controlPanel.add(currentTimeLabel);
+
+        totalTimeLabel = new JLabel("0:00");
+        totalTimeLabel.setForeground(labelColor);
+        totalTimeLabel.setBounds(100, 500, 50, 30); // Position of total time label
+        controlPanel.add(totalTimeLabel);
+
+        // Add control panel to the main frame
+        add(controlPanel);
 
         // Initialize MusicPlayer
         musicPlayer = new MusicPlayer(songs);
 
-        // Add Action Listeners
+        // Add Action Listeners for buttons
         playButton.addActionListener(e -> playSong());
         pauseButton.addActionListener(e -> pauseSong());
         nextButton.addActionListener(e -> playNext());
         previousButton.addActionListener(e -> playPrevious());
         shuffleButton.addActionListener(e -> toggleShuffle());
         loadFolderButton.addActionListener(e -> loadFolder());
-
-        // Add ListSelectionListener to the song list
-        songList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                playButton.setEnabled(true);
-                pauseButton.setEnabled(false);
-                currentSongLabel.setText("No song selected");
-            }
-        });
-
-        // Volume slider listener
-        volumeSlider.addChangeListener(e -> {
-            int volume = volumeSlider.getValue();
-            musicPlayer.setVolume(volume);
-        });
 
         // Set the main window background color
         getContentPane().setBackground(backgroundColor);
@@ -206,12 +208,25 @@ public class SwingMusicPlayer extends JFrame {
             if (!isAdjustingProgress) {
                 int progress = musicPlayer.getProgress();
                 progressSlider.setValue(progress);
+
+                // Update the current time label
+                currentTimeLabel.setText(formatTime(progress));
+
+                // Update the total time label (song duration)
+                int totalDuration = musicPlayer.getTotalDuration();
+                totalTimeLabel.setText(formatTime(totalDuration));
             }
         });
         progressTimer.start();
 
         playButton.setEnabled(false);
         pauseButton.setEnabled(true);
+    }
+
+    private String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        return String.format("%d:%02d", minutes, remainingSeconds);
     }
 
     private void pauseSong() {

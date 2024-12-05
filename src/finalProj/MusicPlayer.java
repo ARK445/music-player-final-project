@@ -115,4 +115,14 @@ public class MusicPlayer {
             clip.addLineListener(listener);
         }
     }
+
+    // Method to get the total duration of the current song in seconds
+    public int getTotalDuration() {
+        if (clip != null) {
+            long totalFrames = clip.getFrameLength();
+            float frameRate = clip.getFormat().getFrameRate(); // Frame rate (frames per second)
+            return (int) (totalFrames / frameRate); // Convert frames to seconds
+        }
+        return 0; // Return 0 if no clip is loaded
+    }
 }
