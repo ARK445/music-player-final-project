@@ -10,7 +10,7 @@ public class SwingMusicPlayer extends JFrame {
 
     private JList<String> songList;
     private JButton playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton, repeatButton;
-    private JLabel currentSongLabel, currentTimeLabel, totalTimeLabel;
+    private JLabel currentSongLabel, currentTimeLabel, totalTimeLabel, imageLabel; // Added imageLabel
     private JSlider volumeSlider;
     private JSlider progressSlider; // Interactive progress slider
     private MusicPlayer musicPlayer;
@@ -33,6 +33,12 @@ public class SwingMusicPlayer extends JFrame {
         // Set dark theme colors
         Color backgroundColor = new Color(40, 30, 40); // Dark background color
         Color labelColor = Color.WHITE; // White text for labels
+
+        // Add an image in the center of the music player
+        imageLabel = new JLabel();
+        imageLabel.setIcon(loadImageIcon("record.png")); // Replace "your_image.png" with your image file name
+        imageLabel.setBounds(300, 200, 500, 200); // Adjust the bounds (x, y, width, height) as needed
+        add(imageLabel);
 
         // Top panel for current song display
         JPanel topPanel = new JPanel();
@@ -193,6 +199,7 @@ public class SwingMusicPlayer extends JFrame {
         }
     }
 
+  
     private void playSong() {
         int selectedIndex = songList.getSelectedIndex();
         if (selectedIndex == -1) {
@@ -223,9 +230,13 @@ public class SwingMusicPlayer extends JFrame {
             }
 
             // Restart the song if repeat is enabled and the song ends
-            if (isRepeat && progressSlider.getValue() >= 100) {
-                musicPlayer.stop(); // Stop and reset the current song
-                playSong(); // Replay the song
+            if (progressSlider.getValue() >= 100) {
+                if (isRepeat) {
+                    musicPlayer.stop(); // Stop and reset the current song
+                    playSong(); // Replay the song
+                } else {
+                    playNext(); // Automatically play the next song
+                }
             }
         });
         progressTimer.start();
