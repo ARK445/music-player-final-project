@@ -30,9 +30,7 @@ public class SwingMusicPlayer extends JFrame {
         setResizable(false);
 
         // Set dark theme colors
-        Color backgroundColor = new Color(40, 40, 40); // Dark background color
-        Color buttonColor = new Color(60, 60, 60); // Dark button background
-        Color buttonTextColor = Color.WHITE; // White text for buttons
+        Color backgroundColor = new Color(40, 30, 40); // Dark background color
         Color labelColor = Color.WHITE; // White text for labels
 
         // Top panel for current song display
@@ -42,7 +40,7 @@ public class SwingMusicPlayer extends JFrame {
         currentSongLabel.setFont(new Font("Arial", Font.BOLD, 18));
         currentSongLabel.setForeground(labelColor);
         topPanel.setBackground(backgroundColor);
-        topPanel.setBounds(10, 10, 1080, 40); // Adjust the position of the top panel
+        topPanel.setBounds(300, 500, 550, 40); // Adjust the position of the top panel
         topPanel.add(currentSongLabel);
         add(topPanel);
 
@@ -75,6 +73,15 @@ public class SwingMusicPlayer extends JFrame {
         shuffleButton = new JButton(loadImageIcon("shuffle.png"));
         loadFolderButton = new JButton(loadImageIcon("music-file.png"));
 
+        // Make buttons invisible but keep icons visible
+        JButton[] buttons = {playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton};
+        for (JButton button : buttons) {
+            button.setBorderPainted(false); // Remove the border
+            button.setContentAreaFilled(false); // Make the background invisible
+            button.setFocusPainted(false); // Disable focus paint
+            button.setOpaque(false); // Ensure transparency
+        }
+
         // Set tooltips for better user experience
         playButton.setToolTipText("Play");
         pauseButton.setToolTipText("Pause");
@@ -83,31 +90,13 @@ public class SwingMusicPlayer extends JFrame {
         shuffleButton.setToolTipText("Shuffle");
         loadFolderButton.setToolTipText("Load Folder");
 
-        // Set button colors
-        playButton.setBackground(buttonColor);
-        pauseButton.setBackground(buttonColor);
-        nextButton.setBackground(buttonColor);
-        previousButton.setBackground(buttonColor);
-        shuffleButton.setBackground(buttonColor);
-        loadFolderButton.setBackground(buttonColor);
-
-        // Set button text colors
-        playButton.setForeground(buttonTextColor);
-        pauseButton.setForeground(buttonTextColor);
-        nextButton.setForeground(buttonTextColor);
-        previousButton.setForeground(buttonTextColor);
-        shuffleButton.setForeground(buttonTextColor);
-        loadFolderButton.setForeground(buttonTextColor);
-
-        pauseButton.setEnabled(true); // Pause button starts as disabled
-
         // Manually set bounds for each button to adjust layout
-        playButton.setBounds(230, 550, 45, 45);
-        pauseButton.setBounds(130, 550, 45, 45);
-        nextButton.setBounds(310, 550, 45, 45);
-        previousButton.setBounds(40, 550, 45, 45);
-        shuffleButton.setBounds(410, 550, 45, 45);
-        loadFolderButton.setBounds(500, 550, 45, 45);
+        playButton.setBounds(230, 545, 45, 45);
+        pauseButton.setBounds(130, 545, 45, 45);
+        nextButton.setBounds(310, 545, 45, 45);
+        previousButton.setBounds(40, 545, 45, 45);
+        shuffleButton.setBounds(410, 545, 45, 45);
+        loadFolderButton.setBounds(500, 545, 45, 45);
 
         // Add buttons to the control panel
         controlPanel.add(playButton);
@@ -173,6 +162,12 @@ public class SwingMusicPlayer extends JFrame {
         shuffleButton.addActionListener(e -> toggleShuffle());
         loadFolderButton.addActionListener(e -> loadFolder());
 
+        // Volume slider listener
+        volumeSlider.addChangeListener(e -> {
+            int volume = volumeSlider.getValue();
+            musicPlayer.setVolume(volume);
+        });
+
         // Set the main window background color
         getContentPane().setBackground(backgroundColor);
     }
@@ -202,6 +197,10 @@ public class SwingMusicPlayer extends JFrame {
         String selectedSong = songList.getModel().getElementAt(selectedIndex);
         currentSongLabel.setText("Playing: " + selectedSong);
         musicPlayer.play(selectedIndex);
+
+        // Apply the current volume setting
+        int currentVolume = volumeSlider.getValue();
+        musicPlayer.setVolume(currentVolume);
 
         progressSlider.setEnabled(true); // Enable progress slider
         progressTimer = new Timer(200, e -> {
@@ -238,10 +237,7 @@ public class SwingMusicPlayer extends JFrame {
     }
 
     private void playNext() {
-        // Clear the last paused position to ensure the next song starts from the beginning
         musicPlayer.lastPausedPosition = 0;
-
-        // If shuffle is enabled, pick a random song; otherwise, go to the next one sequentially
         int nextIndex = isShuffle
                 ? random.nextInt(songList.getModel().getSize())
                 : (songList.getSelectedIndex() + 1) % songList.getModel().getSize();
@@ -253,7 +249,12 @@ public class SwingMusicPlayer extends JFrame {
     private void playPrevious() {
         int currentIndex = songList.getSelectedIndex();
         int previousIndex = (currentIndex - 1 + songList.getModel().getSize()) % songList.getModel().getSize();
+
+        // Ensure the song starts from the beginning
+        musicPlayer.lastPausedPosition = 0;
+
         songList.setSelectedIndex(previousIndex);
+        musicPlayer.stop(); // Stop the current clip to reset playback position
         playSong();
     }
 
