@@ -9,12 +9,13 @@ import java.util.Random;
 public class SwingMusicPlayer extends JFrame {
 
     private JList<String> songList;
-    private JButton playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton;
+    private JButton playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton, repeatButton;
     private JLabel currentSongLabel, currentTimeLabel, totalTimeLabel;
     private JSlider volumeSlider;
     private JSlider progressSlider; // Interactive progress slider
     private MusicPlayer musicPlayer;
     private boolean isShuffle = false; // Track shuffle mode
+    private boolean isRepeat = false; // Track repeat mode
     private Random random = new Random();
     private DefaultListModel<String> listModel; // For dynamically updating the song list
     private Timer progressTimer; // Timer for progress updates
@@ -72,9 +73,10 @@ public class SwingMusicPlayer extends JFrame {
         previousButton = new JButton(loadImageIcon("pp.png"));
         shuffleButton = new JButton(loadImageIcon("shuffle.png"));
         loadFolderButton = new JButton(loadImageIcon("music-file.png"));
+        repeatButton = new JButton(loadImageIcon("repeat.png")); // Repeat button
 
         // Make buttons invisible but keep icons visible
-        JButton[] buttons = {playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton};
+        JButton[] buttons = {playButton, pauseButton, nextButton, previousButton, shuffleButton, loadFolderButton, repeatButton};
         for (JButton button : buttons) {
             button.setBorderPainted(false); // Remove the border
             button.setContentAreaFilled(false); // Make the background invisible
@@ -89,14 +91,16 @@ public class SwingMusicPlayer extends JFrame {
         previousButton.setToolTipText("Previous");
         shuffleButton.setToolTipText("Shuffle");
         loadFolderButton.setToolTipText("Load Folder");
+        repeatButton.setToolTipText("Repeat");
 
         // Manually set bounds for each button to adjust layout
-        playButton.setBounds(230, 545, 45, 45);
-        pauseButton.setBounds(130, 545, 45, 45);
-        nextButton.setBounds(310, 545, 45, 45);
+        playButton.setBounds(195, 545, 45, 45);
+        pauseButton.setBounds(115, 545, 45, 45);
+        nextButton.setBounds(275, 545, 45, 45);
         previousButton.setBounds(40, 545, 45, 45);
         shuffleButton.setBounds(410, 545, 45, 45);
         loadFolderButton.setBounds(500, 545, 45, 45);
+        repeatButton.setBounds(340, 545, 45, 45); // Position for the repeat button
 
         // Add buttons to the control panel
         controlPanel.add(playButton);
@@ -105,6 +109,7 @@ public class SwingMusicPlayer extends JFrame {
         controlPanel.add(previousButton);
         controlPanel.add(shuffleButton);
         controlPanel.add(loadFolderButton);
+        controlPanel.add(repeatButton);
 
         // Volume Panel
         JPanel volumePanel = new JPanel();
@@ -161,6 +166,7 @@ public class SwingMusicPlayer extends JFrame {
         previousButton.addActionListener(e -> playPrevious());
         shuffleButton.addActionListener(e -> toggleShuffle());
         loadFolderButton.addActionListener(e -> loadFolder());
+        repeatButton.addActionListener(e -> toggleRepeat()); // Repeat button
 
         // Volume slider listener
         volumeSlider.addChangeListener(e -> {
@@ -215,6 +221,12 @@ public class SwingMusicPlayer extends JFrame {
                 int totalDuration = musicPlayer.getTotalDuration();
                 totalTimeLabel.setText(formatTime(totalDuration));
             }
+
+            // Restart the song if repeat is enabled and the song ends
+            if (isRepeat && progressSlider.getValue() >= 100) {
+                musicPlayer.stop(); // Stop and reset the current song
+                playSong(); // Replay the song
+            }
         });
         progressTimer.start();
 
@@ -261,6 +273,11 @@ public class SwingMusicPlayer extends JFrame {
     private void toggleShuffle() {
         isShuffle = !isShuffle;
         JOptionPane.showMessageDialog(this, isShuffle ? "Shuffle ON" : "Shuffle OFF", "Shuffle", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void toggleRepeat() {
+        isRepeat = !isRepeat;
+        JOptionPane.showMessageDialog(this, isRepeat ? "Repeat ON" : "Repeat OFF", "Repeat", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void loadFolder() {
